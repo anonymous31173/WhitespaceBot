@@ -213,7 +213,7 @@ def fix_repo(repo):
             '###################\n' + \
             '.hg\n' + \
             '.svn\n' + \
-            '.CVS\n' +
+            '.CVS\n' + \
             '# OS or Editor folders\n' + \
             '###################\n' + \
             '.DS_Store\n' + \
