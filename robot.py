@@ -5,7 +5,6 @@ import subprocess
 import sys
 import argparse
 import time
-from random import choice
 import os
 from os.path import join
 import shutil
@@ -35,12 +34,15 @@ def main():
 
     auth = (settings.username, settings.password)
 
+    print args
+
     old_users_file = args.old_users
     old_users = load_user_list(old_users_file)
 
     users = args.users
+    olders = args.old_users
     new_users = load_user_list(users)
-    user = get_user(users)
+    user = get_user(users, olders)
 
     #XXX: Potential deal breaker in here!
     count = 0
@@ -72,22 +74,31 @@ def main():
         print "Waiting.."
         time.sleep(30)
         print "Cloning.."
+        time.sleep(5)
+        print clone_url
         cloned = clone_repo(clone_url)
         if not cloned:
             return
         print "Changing branch.."
+        time.sleep(5)
         branched = change_branch(repo)
         print "Fixing repo.."
+        time.sleep(10)
         fixed = fix_repo(repo)
         print "Comitting.."
+        time.sleep(5)
         commited = commit_repo(repo)
         print "Pushing.."
+        time.sleep(5)
         pushed = push_commit(repo)
         print "Submitting pull request.."
+        time.sleep(5)
         submitted = submit_pull_request(user, repo)
         print "Delting local repo.."
+        time.sleep(5)
         deleted = delete_local_repo(repo)
         print "Olding user.."
+        time.sleep(5)
         old = save_user(old_users_file, user)
 
 
@@ -114,12 +125,22 @@ def get_user(users):
     text_file.close()
     return choice(u).rstrip()
 
+def get_user(users_file, old_users_file):
+    # Get the first user not already processed
+    old_users = load_user_list(old_users_file)
+    users = load_user_list(users_file)
+    #new_users = users.difference(old_users)
+    new_users = list(set(users) - set(old_users))
+    return new_users.pop() if new_users else None
 
 def fork_repo(user, repo):
     url = 'https://api.github.com/repos/' + user + '/' + repo + '/forks'
     auth = (settings.username, settings.password)
+    print settings.username
     r = requests.post(url, auth=auth)
-    if (r.status_code == 201):
+    print r.status_code
+    #if (r.status_code == 201):
+    if (r.status_code == 202):
         resp = simplejson.loads(r.content)
         return resp['ssh_url']
     else:
@@ -138,8 +159,9 @@ def clone_repo(clone_url):
 
 def change_branch(repo):
     #XXX fuck this
-    gitdir = os.path.join(settings.pwd, repo, ".git")
-    repo = os.path.join(settings.pwd, repo)
+    #gitdir = os.path.join(settings.username, repo, ".git")
+    #repo = os.path.join(settings.username, repo)
+    gitdir = os.path.join(repo, ".git")
 
     try:
         args = ['/usr/bin/git', '--git-dir', gitdir, '--work-tree', repo, 'branch', 'clean']
@@ -154,14 +176,17 @@ def change_branch(repo):
 
 
 def fix_repo(repo):
-    gitdir = os.path.join(settings.pwd, repo, ".git")
-    repo = os.path.join(settings.pwd, repo)
+    #gitdir = os.path.join(settings.username, repo, ".git")
+    #repo = os.path.join(settings.username, repo)
+
+    gitdir = os.path.join(repo, ".git")
+
     for root, dirs, files in os.walk(repo):
         for f in files:
             path = os.path.join(root, f)
 
             # gotta be a way more pythonic way of doing this
-            banned = ['.git', '.py', '.yaml', '.patch', '.hs', '.occ', '.md', '.markdown', '.mdown']
+            banned = ['.git', '.html', '.css', '.conf', '.ino', '.manifest', '.htaccess', '.py', '.pl', '.service', '.pem', '.txt', '.sh', '.rst', '.po', '.pot', '.js', '.travis', '.yml', '.yaml', 'Makefile', '.patch', '.hs', '.svg', 'html', '.cfg', '.in', 'plugins', '.buildinfo', '.occ', '.md', '.markdown', 'README', 'gateone', '.directory', '.mdown']
             cont = False
             for b in banned:
                 if b in path:
@@ -185,73 +210,13 @@ def fix_repo(repo):
                     pee.wait()
                 if o == '' and p.poll() != None: break
 
-    git_ignore = os.path.join(repo, '.gitignore')
-    if not os.path.exists(git_ignore):
-        ignorefile = open(git_ignore, 'w')
-        ignore = '# Compiled source #\n' + \
-            '###################\n' + \
-            '*.com\n' + \
-            '*.class\n' + \
-            '*.dll\n' + \
-            '*.exe\n' + \
-            '*.o\n' + \
-            '*.so\n' + \
-            '*.pyc\n\n' + \
-            '# Numerous always-ignore extensions\n' + \
-            '###################\n' + \
-            '*.diff\n' + \
-            '*.err\n' + \
-            '*.orig\n' + \
-            '*.log\n' + \
-            '*.rej\n' + \
-            '*.swo\n' + \
-            '*.swp\n' + \
-            '*.vi\n' + \
-            '*~\n\n' + \
-            '*.sass-cache\n' + \
-            '# Folders to ignore\n' + \
-            '###################\n' + \
-            '.hg\n' + \
-            '.svn\n' + \
-            '.CVS\n' +
-            '# OS or Editor folders\n' + \
-            '###################\n' + \
-            '.DS_Store\n' + \
-            'Icon?\n' + \
-            'Thumbs.db\n' + \
-            'ehthumbs.db\n' + \
-            'nbproject\n' + \
-            '.cache\n' + \
-            '.project\n' + \
-            '.settings\n' + \
-            '.tmproj\n' + \
-            '*.esproj\n' + \
-            '*.sublime-project\n' + \
-            '*.sublime-workspace\n' + \
-            '# Dreamweaver added files\n' + \
-            '###################\n' + \
-            '_notes\n' + \
-            'dwsync.xml\n' + \
-            '# Komodo\n' + \
-            '###################\n' + \
-            '*.komodoproject\n' + \
-            '.komodotools\n'
-        ignorefile.write(ignore)
-        ignorefile.close()
-        try:
-            args = ['/usr/bin/git', '--git-dir', gitdir, '--work-tree', repo, 'add', git_ignore]
-            p = subprocess.Popen(args)
-            p.wait()
-            return True
-        except Exception, e:
-            return False
-
     return True
 
 
 def commit_repo(repo):
-    gitdir = os.path.join(settings.pwd, repo, ".git")
-    repo = os.path.join(settings.pwd, repo)
+    #gitdir = os.path.join(settings.username, repo, ".git")
+    #repo = os.path.join(settings.username, repo)
+    gitdir = os.path.join(repo, ".git")
 
     try:
         message = "Remove whitespace [Gun.io WhitespaceBot]"
@@ -265,8 +230,9 @@ def commit_repo(repo):
 
 
 def push_commit(repo):
-    gitdir = os.path.join(settings.pwd, repo, ".git")
-    repo = os.path.join(settings.pwd, repo)
+    #gitdir = os.path.join(settings.username, repo, ".git")
+    #repo = os.path.join(settings.username, repo)
+    gitdir = os.path.join(repo, ".git")
     try:
         args = ['/usr/bin/git', '--git-dir', gitdir, '--work-tree', repo, 'push', 'origin', 'clean']
         p = subprocess.Popen(args)
@@ -281,39 +247,37 @@ def basic_authorization(user, password):
     s = user + ":" + password
     return "Basic " + s.encode("base64").rstrip()
 
-
 def submit_pull_request(user, repo):
+    import base64
+    gitconfig()
     auth = (settings.username, settings.password)
+    basic_auth = basic_authorization(settings.username, settings.password)
     url = 'https://api.github.com/repos/' + user + '/' + repo + '/pulls'
-    params = {'title': 'Hi! I cleaned up your code for you!', 'body': 'Hi'
-            + ' there!\n\nThis is WhitespaceBot. I\'m an [open-source](https://github.com/Gunio/WhitespaceBot) robot that'
-            + ' removes trailing white space in your code, and gives you a gitignore file if you didn\'t have one! ' +
-            ' \n\nWhy whitespace? Whitespace is an eyesore for developers who use text editors with dark themes. It\'s not ' +
-            ' a huge deal, but it\'s a bit annoying if you use Vim in a terminal. Really, I\'m just a proof of ' +
-            ' concept - GitHub\'s V3 API allows robots to automatically improve open source projects, and that\'s really' +
-            ' cool. Hopefully, somebody, maybe you!, will fork me and make me even more useful. My owner is ' +
-            '[funding a bounty](http://gun.io/open/12/add-security-flaw-fixing-features-to-whitespacebot) to anybody ' +
-            'who can add security fixing features to me. ' +
-            '\n\nI\'ve only cleaned your most popular project, and I\'ve added you to a list of users not to contact ' +
-            'again, so you won\'t get any more pull requests from me unless you ask. If I\'m misbehaving, please email my ' +
-            'owner and tell him to turn me off! If this is pull request is of no use to you, please just ignore it.\n\n' +
-            'Thanks!\nWhiteSpacebot from [Gun.io](http://gun.io).',
-            'base': 'master', 'head': 'GunioRobot:clean'}
+    #url = 'https://salvius:robot8888@api.github.com/repos/' + user + '/' + repo + '/pulls'
 
-    req = urllib2.Request(url,
-                          headers={
-                              "Authorization": basic_authorization(settings.username, settings.password),
-                              "Content-Type": "application/json",
-                              "Accept": "*/*",
-                              "User-Agent": "WhitespaceRobot/Gunio",
-                          },
-                          data=json.dumps(params))
+    with open('message.txt', 'r') as f:
+        message = f.read()
+
+    headers={'Authorization': basic_auth,
+             'Content-Type': 'application/json',
+             'Accept': '*/*',
+             'User-Agent': 'WhitespaceRobot/Gunio'}
+    params = {'title': 'Hi! I cleaned up your code for you!',
+              'body': message,
+              'base': 'master',
+              'head': 'GunioRobot:clean'}
+    json_data = json.dumps(params)
+
+    req = urllib2.Request(url, data=json.dumps(params))
+
+    base64string = base64.encodestring('%s:%s' % (settings.username, settings.password)).replace('\n', '')
+    req.add_header("Authorization", "Basic %s" % base64string)
+
     f = urllib2.urlopen(req)
     return True
 
-
 def delete_local_repo(repo):
-    repo = os.path.join(settings.pwd, repo)
+    repo = os.path.join(settings.username, repo)
     try:
         shutil.rmtree(repo)
         return True
