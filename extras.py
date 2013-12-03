@@ -1,5 +1,5 @@
 git_ignore = os.path.join(repo, '.gitignore')
-if not os.path.exists(git_ignore):
+if not os.path.exists(git_ignore):           
         ignorefile = open(git_ignore, 'w')
         ignore = '# Compiled source #\n' + \
             '###################\n' + \
