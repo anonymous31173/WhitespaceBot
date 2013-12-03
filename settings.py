@@ -1,4 +1,3 @@
-# Put your User/Pass in here!
-
-username='YourUsername'
-password='YourPassword'
+# USER NAME AND PASSWORD
+username='Salvius'
+password='robot8888'
