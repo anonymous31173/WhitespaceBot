@@ -156,17 +156,11 @@ def change_branch(repo):
 def fix_repo(repo):
     gitdir = os.path.join(settings.pwd, repo, ".git")
     repo = os.path.join(settings.pwd, repo)
+    banned = ['.git', '.py', '.yaml', '.patch', '.hs', '.occ', '.md', '.markdown', '.mdown']
     for root, dirs, files in os.walk(repo):
         for f in files:
             path = os.path.join(root, f)
-
-            # gotta be a way more pythonic way of doing this
-            banned = ['.git', '.py', '.yaml', '.patch', '.hs', '.occ', '.md', '.markdown', '.mdown']
-            cont = False
-            for b in banned:
-                if b in path:
-                    cont = True
-            if cont:
+            if any(b in path for b in banned):
                 continue
 
             p = subprocess.Popen(['file', '-bi', path], stdout=subprocess.PIPE)
