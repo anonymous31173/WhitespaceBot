@@ -210,6 +210,8 @@ def fix_repo(repo):
                     pee.wait()
                 if o == '' and p.poll() != None: break
 
+<<<<<<< HEAD
+=======
     git_ignore = os.path.join(repo, '.gitignore')
     if not os.path.exists(git_ignore):
         ignorefile = open(git_ignore, 'w')
@@ -271,6 +273,7 @@ def fix_repo(repo):
         except Exception, e:
             return False
 
+>>>>>>> mwarkentin-master
     return True
 
 
